@@ -1,0 +1,14 @@
+# physical motor axis limit update
+record(calc, "$(SYS)$(DEV)-HLS") {
+  field(SCAN, ".2 second")
+  field(CALC, "A+B")
+  field(INPA, "$(SYS)$(DEV)Sts:4-Sts.B9") # PMAC status positive limit
+  field(INPB, "$(SYS)$(DEV)Mtr.HLS") # motor record positive limit
+}
+
+record(calc, "$(SYS)$(DEV)-LLS") {
+  field(SCAN, ".2 second")
+  field(CALC, "A+B")
+  field(INPA, "$(SYS)$(DEV)Sts:4-Sts.BA") # PMAC status negative limit
+  field(INPB, "$(SYS)$(DEV)Mtr.LLS") # motor record negative limit
+}

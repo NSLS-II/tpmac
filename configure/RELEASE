@@ -1,0 +1,9 @@
+# Ansible managed
+#
+# RELEASE location of any EPICS module deps for tpmac
+#
+
+MOTOR=/usr/lib/epics
+EPICS_BASE=/usr/lib/epics
+
+-include $(TOP)/../configure/EPICS_BASE.$(EPICS_HOST_ARCH)

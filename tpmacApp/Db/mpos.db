@@ -1,0 +1,39 @@
+# keep motor position
+record(ai,"$(Sys)$(Dev)$(Pos)"){
+  field(DTYP, "Soft Channel")
+  field(DESC, "$(DESC)")
+  field(PREC, $(PREC="4"))        # Precision
+  field(EGU,  $(EGU="mm"))
+  field(INP,  "CONSTANT")
+
+  info(autosaveFields_pass0, "VAL")
+  info(autosaveFields, "VAL")
+}
+
+# output position to motor record
+record(calcout,"$(Sys)$(Dev)$(Pos)go") {
+  field(DESC, "Output save position to motor record")
+  field(INPA, "$(Sys)$(Dev)$(Pos).VAL")
+  field(CALC, "A")
+  field(OUT,  "$(Sys)$(Dev)Mtr.VAL PP")
+}
+
+# compare set position with motor readback
+record(calcout,"$(Sys)$(Dev)$(Pos)com") {
+  field(DESC, "Compare save position to motor position")
+  field(SCAN, ".2 second")
+  field(INPA, "$(Sys)$(Dev)$(Pos).VAL")
+  field(INPB, "$(Sys)$(Dev)Mtr.RBV")
+  field(CALC, "(ABS(A-B)>0.005)?0:1")
+#  field(CALC,  "A>0?1:0")
+  field(OUT,  "$(Sys)$(Dev)$(Pos)Inp PP")
+}
+
+# indicate whether motor is at set position
+record(bi, "$(Sys)$(Dev)$(Pos)Inp"){
+  field(DESC, "in position flag")
+  field(DTYP, "Soft Channel")
+  field(ZNAM, "0")
+  field(ONAM, "1")
+}
+

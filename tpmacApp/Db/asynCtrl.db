@@ -1,0 +1,11 @@
+# defer movement
+record(bo, "${P}${M}:DEFER_MOVE") {
+  field(DTYP, "asynUInt32Digital")
+  field(OUT, "@asynMask($(PORT),1,1)MOTOR_DEFER_MOVES")
+  field(SCAN, "Passive")
+  field(ZNAM, "Go")
+  field(ONAM, "Defer")
+  field(VAL, "0")
+  field(DESC, "Deferred moves")
+}
+

@@ -1,0 +1,198 @@
+record(motor,"$(P)$(M)")
+{
+	field(DESC, "$(DESC)")
+	field(DTYP, "$(DTYP)")
+	field(OUT,  "@asyn($(MOTOR),$(ADDR))")
+
+	field(RTRY, $(RTRY="0"))	# Max Retries
+
+	# Use of MRES is deliberate on the following line. 
+	# This sets the retry deadband to the smallest possible size.
+	field(RDBD, $(MRES="1"))	# Retry Deadband
+	field(MRES, $(MRES="1"))        # Motor Step Size (EGU) MRES=SREV/UREV
+	field(EGU,  $(EGU="None"))      # Engineering Units
+	field(PREC, $(PREC="0"))        # Precision 
+
+	field(VBAS, $(VBAS="0.01"))	# EGU/sec
+	field(VELO, $(VELO="0.1"))	# EGU/sec
+	field(VMAX, $(VMAX="0.5"))	# EGU/sec	
+	field(ACCL, $(ACCL="0.1"))	# seconds
+	field(BDST, $(BDST="0"))	# backlash dist
+	field(BVEL, $(BVEL="0.1"))	# EGU/sec
+	field(BACC, $(BACC="0.2"))	# seconds
+
+	info(autosaveFields_pass0, "DVAL DIR DHLM DLLM TWV SREV MRES ERES RRES VBAS VELO VMAX ACCL BDST BVEL BACC RDBD DESC EGU RTRY UEIP URIP DLY RDBL PREC DISA DISP FOFF OFF FRAC OMSL JVEL JAR PCOF ICOF DCOF HVEL NTM NTMF")
+
+	info(autosaveFields, "DIR DHLM DLLM TWV SREV MRES ERES RRES VBAS VELO VMAX ACCL BDST BVEL BACC RDBD DESC EGU RTRY UEIP URIP DLY RDBL PREC DISA DISP FOFF OFF FRAC OMSL JVEL JAR PCOF ICOF DCOF HVEL NTM NTMF")
+}
+
+record(transform, "$(P)$(M)_ableput") {
+  field(CLCB, "a")
+  field(CLCC, "a")
+  field(OUTA, "$(P)$(M).DISA NPP NMS")
+  field(OUTB, "$(P)$(M).DISP NPP NMS")
+  field(OUTC, "$(P)$(M).DISA NPP NMS")
+}
+
+record(bo, "$(P)$(M)_able") {
+  field(DESC, "motor enable")
+  field(PINI, "YES")
+  field(OUT, "$(P)$(M)_ableput.A PP MS")
+  field(ZNAM, "Enable")
+  field(ONAM, "Disable")
+}
+
+# allow users to change the velocity (or speed)
+# by sending a multipler to the
+#    $(P)$(M)_vCh.A field
+# Range check output; SBAS <= S <= SMAX.
+record(scalcout, "$(P)$(M)_vCh") {
+  field(DESC, "change velocity")
+  field(INPB, "$(P)$(M).S")
+  field(INPC, "$(P)$(M).SBAS")
+  field(INPD, "$(P)$(M).SMAX")
+  field(CALC, "min(max(a*b,c),d)")
+  field(OUT, "$(P)$(M).S")
+}
+
+# allow users to change the tweak value
+# by sending a multipler to the
+#    $(P)$(M)_twCh.A field
+# Range check output; TWV <= HLM - LLM.
+record(scalcout, "$(P)$(M)_twCh") {
+  field(DESC, "change TWV")
+  field(INPB, "$(P)$(M).TWV")
+  field(INPC, "$(P)$(M).MRES")
+  field(INPD, "$(P)$(M).HLM")
+  field(INPE, "$(P)$(M).LLM")
+  field(CALC, "min(max(a*b,c),d-e)")
+  field(OUT, "$(P)$(M).TWV")
+}
+
+#####################################################################################################################
+# record that holds the ADDR
+record(ao, "$(P)$(M):ADDR") {
+    field(PINI, "YES")
+    field(VAL, "$(ADDR)")
+}
+
+# record that holds the PORT
+record(stringout, "$(P)$(M):PORT") {
+    field(PINI, "YES")
+    field(VAL, "$(PORT)")
+}
+
+# record that holds the SCALE
+record(stringout, "$(P)$(M):SCALE") {
+    field(PINI, "YES")
+    field(VAL, "$(SCALE=1)")
+}
+
+# Write a 1 to this record over Channel Access to disable the motor record and prevent CA writes to any field
+# including the demand field.
+record(ai, "$(P)$(M):USER:SDIS") {
+    field(VAL, "0")
+    field(FLNK, "$(P)$(M):SDIS")
+}
+
+# Note: This record forms part of the interface to auto-homing, which uses the "A" field to disable the motor record
+# when homing.
+# record that will disable and re-enable record if any of its inputs are non-zero
+record(calcout, "$(P)$(M):SDIS") {
+  field(DESC, "Disable on non-zero input")
+  field(INPL, "$(P)$(M):USER:SDIS")
+  field(CALC, "(A|B|C|D|E|F|G|H|I|J|K|L)>0")
+  field(OUT, "$(P)$(M).DISP PP")
+}
+
+# dummy record that looks like a kill command
+record(ao, "$(P)$(M):KILL") {
+    field(VAL, "1")
+}
+
+# dummy record that looks like eloss status
+#% archiver 10 Monitor VAL
+#% $(alh=None) $SEVRCOMMAND UP_ANY dls-alh-handler.py $(P)$(M):ELOSS
+record(ai, "$(P)$(M):ELOSS") {
+    field(PINI, "YES")
+    field(HIHI, "1")
+    field(HHSV, "MAJOR")    
+}
+
+# dummy record that looks like an eloss reset
+record(calcout, "$(P)$(M):ELOSSRC") {
+}
+
+# check if SYNC has been pressed
+record(calcout, "$(P)$(M):CHECK_SYNC") {
+  field(INPA, "$(P)$(M).SYNC CP")  
+  field(CALC, "A>0")
+  field(OOPT, "When Non-zero")
+  field(OUT, "$(P)$(M):MR_MOVE_WRITE.PROC PP")
+}
+
+# dummy record that looks like a record to notify a CS about a raw motor move
+record(longout, "$(P)$(M):MR_MOVE_WRITE") {
+}
+
+#Record to calculate the following error
+#% archiver 1 Monitor
+record(calc, "$(P)$(M):FERROR")
+{
+	field(DESC,"Following Error")
+	field(INPA,"$(P)$(M).RMP CP")
+	field(INPB,"$(P)$(M).REP NPP")
+	field(INPC,"$(P)$(M).MRES NPP")
+	field(INPD,"$(P)$(M).ERES NPP")
+	field(CALC,"ABS((A*C)-(B*D))")
+	field(FLNK,"$(P)$(M):FERRORMAX")
+	field(PREC,"$(PREC)")
+	field(EGU, "$(EGU)")
+}
+
+#Record to store the maximum following error
+#% archiver 10 Monitor VAL
+#% autosave 1 VAL
+#% $(alh=None) $SEVRCOMMAND UP_ANY dls-alh-handler.py $(P)$(M):FERRORMAX
+record(calc, "$(P)$(M):FERRORMAX")
+{
+	field(DESC,"Following Error Max")
+	field(INPA,"$(P)$(M):FERROR.VAL")
+	field(INPB,"$(P)$(M):FERRORMAX.VAL")
+	field(CALC,"(A>B)?A:B")
+	field(HIGH,"$(FEHIGH=0)")
+	field(HIHI,"$(FEHIHI=0)")
+	field(HHSV,"$(FEHHSV=NO_ALARM)")
+	field(HSV, "$(FEHSV=NO_ALARM)")
+	field(PREC,"$(PREC)")
+	field(EGU, "$(EGU)")
+}	
+
+#Record to reset the maximum following error
+record(bo, "$(P)$(M):FEMAXRESET")
+{
+	field(DESC,"Reset max following error")
+	field(DTYP,"Soft Channel")
+	field(OUT, "$(P)$(M):FERRORMAX.VAL")
+	field(VAL, "0")
+}	
+
+
+#Record to determin HOME button visibility on the motor.edl screen.
+record(bo, "$(P)$(M):HOMEVIS")
+{
+	field(DESC,"Home button visibility")
+	field(DTYP,"Soft Channel")
+	field(VAL, "$(HOMEVIS=1)")
+        field(ZNAM, "Invisible")
+	field(ONAM, "Visible")
+}	 
+
+#Record to display a message if the HOME buttons are not visible (if HOMEVIS=0).
+record(stringout, "$(P)$(M):HOMEVISSTR")
+{
+	field(DESC, "Home visibility string")
+	field(DTYP,"Soft Channel")
+	field(VAL, "$(HOMEVISSTR=Use motor summary screen)")
+}
+
